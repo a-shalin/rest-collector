@@ -6,9 +6,7 @@ import org.springframework.stereotype.Service;
 import ru.cloudinfosys.rc.db.Ddl;
 
 import javax.sql.DataSource;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.StringReader;
 import java.sql.Connection;
 import java.sql.SQLException;
 

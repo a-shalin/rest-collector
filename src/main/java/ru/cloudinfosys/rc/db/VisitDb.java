@@ -6,8 +6,6 @@ import org.apache.ibatis.annotations.Param;
 import ru.cloudinfosys.rc.beans.Period;
 import ru.cloudinfosys.rc.beans.Visit;
 
-import java.util.Date;
-
 @Mapper
 public interface VisitDb {
     void insertVisit(@Param("visit") Visit visit);
