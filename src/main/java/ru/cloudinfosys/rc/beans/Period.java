@@ -1,6 +1,5 @@
 package ru.cloudinfosys.rc.beans;
 
-import java.text.DateFormat;
 import java.util.Date;
 
 public class Period {

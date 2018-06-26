@@ -14,13 +14,11 @@ import ru.cloudinfosys.rc.beans.Visit;
 import ru.cloudinfosys.rc.serv.Counter;
 
 import java.nio.charset.Charset;
-import java.sql.Time;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ru.cloudinfosys.rc.db.Ddl">
+    <select id="isDbInitialized" resultType="_boolean">
+        select	count(*)
+        from	pg_class a
+                join pg_roles b on a.relowner = b.oid and b.rolname = current_user
+        where   a.relkind = 'r'
+        and     lower(a.relname) = 'rc_visit'
+    </select>
+
+    <update id="dropVisit">
+        drop table rc_visit
+    </update>
+
+    <update id="createVisit">
+        create table rc_visit (user_id integer, page_id integer, doc_date timestamp)
+    </update>
+</mapper>
