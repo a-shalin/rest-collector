@@ -9,12 +9,4 @@
         where   a.relkind = 'r'
         and     lower(a.relname) = 'rc_visit'
     </select>
-
-    <update id="dropVisit">
-        drop table rc_visit
-    </update>
-
-    <update id="createVisit">
-        create table rc_visit (user_id integer, page_id integer, doc_date timestamp)
-    </update>
 </mapper>

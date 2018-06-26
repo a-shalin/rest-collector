@@ -3,18 +3,30 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="ru.cloudinfosys.rc.db.VisitDb">
     <insert id="insertVisit">
-        insert into rc_visit values (#{userId}, #{pageId}, #{docDate})
+        insert into rc_visit(user_id, page_id, doc_date) values (#{visit.userId}, #{visit.pageId}, #{visit.docDate})
     </insert>
 
     <select id="getCurrentUniqueUserCount" resultType="_int">
-        select	count(distinct userId)
+        select	count(distinct user_id)
         from	rc_visit a
-        where   a.doc_date between date_trunc(now()) and date_trunc(now()) + interval '1 day'
+        where   a.doc_date between date_trunc('day', now()) and date_trunc('day', now()) + interval '1 day'
     </select>
 
     <select id="getCurrentVisitCount" resultType="_int">
         select	count(*)
         from	rc_visit a
-        where   a.doc_date between date_trunc(now()) and date_trunc(now()) + interval '1 day'
+        where   a.doc_date between date_trunc('day', now()) and date_trunc('day', now()) + interval '1 day'
+    </select>
+
+    <select id="getPeriodUniqueUserCount" resultType="_int">
+        select	count(distinct user_id)
+        from	rc_visit a
+        where   a.doc_date between #{period.begDate} and #{period.endDate}
+    </select>
+
+    <select id="getPeriodVisitCount" resultType="_int">
+        select	count(*)
+        from	rc_visit a
+        where   a.doc_date between #{period.begDate} and #{period.endDate}
     </select>
 </mapper>

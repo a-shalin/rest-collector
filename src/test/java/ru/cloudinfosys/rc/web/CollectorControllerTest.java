@@ -1,6 +1,6 @@
 package ru.cloudinfosys.rc.web;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -42,40 +42,58 @@ public class CollectorControllerTest {
     @Autowired
     Counter counter;
 
+    private volatile boolean stopped = false;
+
     @Test
     public void visit() throws Exception {
-        ExecutorService es = Executors.newWorkStealingPool();
+        for (int i = 0; i < 50000; i++) {
+            int userId = ThreadLocalRandom.current().nextInt(0, 100000);
+            int pageId = ThreadLocalRandom.current().nextInt(0, 1000000);
 
-        for (int i = 0; i < 10; i++) {
-            es.submit(() -> {
-                try {
-                    while (true) {
-                        if (Thread.interrupted()) return;
-
-                        int userId = ThreadLocalRandom.current().nextInt(0, 100000);
-                        int pageId = ThreadLocalRandom.current().nextInt(0, 1000000);
-
-                        mockMvc.perform(get("/visit")
-                                .param(Visit.USER_ID, String.valueOf(userId))
-                                .param(Visit.PAGE_ID, String.valueOf(pageId))
-                                .accept(contentType)).andExpect(status().isOk());
-                    }
-                } catch (InterruptedException e) {
-                    Logger.getLogger(CollectorControllerTest.class).debug("Thread interrupted");
-                } catch (Exception e) {
-                    Logger.getLogger(CollectorControllerTest.class).error("Error interrupted thread", e);
-                }
-            });
+            mockMvc.perform(get("/visit")
+                    .param(Visit.USER_ID, String.valueOf(userId))
+                    .param(Visit.PAGE_ID, String.valueOf(pageId))
+                    .accept(contentType)).andExpect(status().isOk());
         }
 
-        TimeUnit.SECONDS.sleep(5);
-        es.shutdown();
-
-        es.awaitTermination(50, TimeUnit.MILLISECONDS);
-        es.shutdownNow();
-
-        Logger.getLogger(getClass()).debug("userCount = " + counter.getUserCount() +
-                ", visitCount = " + counter.getVisitCount());
+//        ExecutorService es = Executors.newWorkStealingPool();
+//        stopped = false;
+//
+//        for (int i = 0; i < Runtime.getRuntime().availableProcessors(); i++) {
+//            es.submit(() -> {
+//                try {
+//                    while (true) {
+//                        if (stopped) {
+//                            LogManager.getLogger(CollectorControllerTest.class).debug("Visit generation thread finished");
+//                            return;
+//                        }
+//
+//                        int userId = ThreadLocalRandom.current().nextInt(0, 100000);
+//                        int pageId = ThreadLocalRandom.current().nextInt(0, 1000000);
+//
+//                        mockMvc.perform(get("/visit")
+//                                .param(Visit.USER_ID, String.valueOf(userId))
+//                                .param(Visit.PAGE_ID, String.valueOf(pageId))
+//                                .accept(contentType)).andExpect(status().isOk());
+//                    }
+//                } catch (InterruptedException e) {
+//                    LogManager.getLogger(CollectorControllerTest.class).debug("Visit generation thread interrupted");
+//                } catch (Exception e) {
+//                    LogManager.getLogger(CollectorControllerTest.class).error("Error interrupted visit generation thread", e);
+//                }
+//            });
+//        }
+//
+//        TimeUnit.SECONDS.sleep(30);
+//
+//        es.shutdown();
+//        stopped = true;
+//
+//        es.awaitTermination(20, TimeUnit.SECONDS);
+//        es.shutdownNow();
+//
+//        LogManager.getLogger(getClass()).debug("userCount = " + counter.getUserCount() +
+//                ", visitCount = " + counter.getVisitCount());
     }
 
 }
