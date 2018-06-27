@@ -11,17 +11,24 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.context.WebApplicationContext;
+import ru.cloudinfosys.rc.beans.Period;
 import ru.cloudinfosys.rc.beans.Visit;
+import ru.cloudinfosys.rc.db.VisitDb;
 import ru.cloudinfosys.rc.serv.Counter;
 
 import java.nio.charset.Charset;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static java.lang.String.format;
+import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 
@@ -45,12 +52,14 @@ public class CollectorControllerTest {
     @Autowired
     Counter counter;
 
-    public static final int ROW_COUNT = 50000;
-    public static final int TASK_COUNT = 10;
+    public static final int ROW_COUNT = 100000;
+    public static final int TASK_COUNT = 4;
     private AtomicInteger processedRows = new AtomicInteger(0);
 
     @Test
     public void testBanchOfVisits() throws Exception {
+        long start = System.currentTimeMillis();
+
         ExecutorService es = Executors.newFixedThreadPool(TASK_COUNT);
         processedRows.set(0);
 
@@ -58,7 +67,7 @@ public class CollectorControllerTest {
             es.submit(() -> {
                 try {
                     for (int j = 0; j < ROW_COUNT / TASK_COUNT; j++) {
-                        int userId = ThreadLocalRandom.current().nextInt(0, 100000);
+                        int userId = ThreadLocalRandom.current().nextInt(0, 10000);
                         int pageId = ThreadLocalRandom.current().nextInt(0, 1000000);
 
                         mockMvc.perform(get("/visit")
@@ -79,11 +88,45 @@ public class CollectorControllerTest {
 
         es.shutdown();
         while (!es.awaitTermination(3, TimeUnit.SECONDS)) {
-            log.info(String.format("Queries processed %d from %d", processedRows.get(), ROW_COUNT));
+            log.info(format("Queries processed %d from %d", processedRows.get(), ROW_COUNT));
         }
 
-        log.info("userCount = " + counter.getUserCount() +
-                ", visitCount = " + counter.getVisitCount());
+        long diff = System.currentTimeMillis() - start;
+        log.info(format("Processed %d REST calls in %d ms, rate = %2f calls per sec. User count = %d, visit count = %d",
+                ROW_COUNT, diff, ROW_COUNT*1000.0/diff, counter.getUserCount(), counter.getVisitCount()));
     }
 
+    @Autowired
+    VisitDb visitDb;
+
+    @Test
+    public void testStat() throws Exception {
+        Calendar beg = Calendar.getInstance();
+        beg.set(Calendar.MONTH, Calendar.JANUARY);
+        beg.set(Calendar.DAY_OF_MONTH, 1);
+        beg.clear(Calendar.HOUR_OF_DAY);
+        beg.clear(Calendar.MINUTE);
+        beg.clear(Calendar.SECOND);
+        beg.clear(Calendar.MILLISECOND);
+
+        Calendar end = Calendar.getInstance();
+        end.set(Calendar.HOUR_OF_DAY, beg.getActualMaximum(Calendar.HOUR_OF_DAY));
+        end.set(Calendar.MINUTE, beg.getActualMaximum(Calendar.MINUTE));
+        end.set(Calendar.SECOND, beg.getActualMaximum(Calendar.SECOND));
+        end.set(Calendar.MILLISECOND, beg.getActualMaximum(Calendar.MILLISECOND));
+
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+
+        Period period = new Period(beg.getTime(), end.getTime());
+
+        mockMvc.perform(get("/stat")
+                .param(Period.BEG_DATE, df.format(beg.getTime()))
+                .param(Period.END_DATE, df.format(end.getTime()))
+                .accept(contentType))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.visitCount", is(visitDb.getPeriodVisitCount(period))))
+                .andExpect(jsonPath("$.uniqueUserCount", is(visitDb.getPeriodUniqueUserCount(period))))
+                .andExpect(jsonPath("$.loyalUserCount", is(visitDb.getPeriodLoyalUserCount(period))))
+        ;
+    }
 }

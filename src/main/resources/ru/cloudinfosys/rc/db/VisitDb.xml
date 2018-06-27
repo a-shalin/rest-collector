@@ -11,6 +11,12 @@
         where   a.doc_date between #{period.begDate} and #{period.endDate}
     </delete>
 
+    <select id="getCurrentUniqueUsers" resultType="_int">
+        select	distinct user_id
+        from	rc_visit a
+        where   a.doc_date between date_trunc('day', now()) and date_trunc('day', now()) + interval '1 day'
+    </select>
+
     <select id="getCurrentUniqueUserCount" resultType="_int">
         select	count(distinct user_id)
         from	rc_visit a
@@ -33,5 +39,16 @@
         select	count(*)
         from	rc_visit a
         where   a.doc_date between #{period.begDate} and #{period.endDate}
+    </select>
+
+    <select id="getPeriodLoyalUserCount" resultType="_int">
+        select count(*)
+        from (
+             select user_id
+             from   rc_visit a
+             where  a.doc_date between #{period.begDate} and #{period.endDate}
+             group by user_id
+             having count(distinct page_id) >= 10
+        ) b;
     </select>
 </mapper>

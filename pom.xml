@@ -5,7 +5,7 @@
 
 	<groupId>ru.cloudinfosys</groupId>
 	<artifactId>rc</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.1</version>
 	<packaging>jar</packaging>
 
 	<name>rc</name>
@@ -49,6 +49,12 @@
             <artifactId>postgresql</artifactId>
             <version>42.2.2</version>
         </dependency>
+		<dependency>
+			<groupId>org.hamcrest</groupId>
+			<artifactId>hamcrest-library</artifactId>
+			<version>1.3</version>
+			<scope>test</scope>
+		</dependency>
 
  		<dependency>
 			<groupId>org.springframework.boot</groupId>

@@ -4,7 +4,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import ru.cloudinfosys.rc.beans.Visit;
 import ru.cloudinfosys.rc.beans.VisitResult;
 import ru.cloudinfosys.rc.db.VisitDb;
@@ -25,7 +24,7 @@ public class Counter {
     private volatile int visitCount = 0;
     private final Set<Integer> users = new HashSet<>();
 
-    private final BlockingQueue<Visit> visits = new ArrayBlockingQueue<>(10000);
+    private final BlockingQueue<Visit> visits = new ArrayBlockingQueue<>(1000);
 
     @Autowired
     VisitDb visitDb;
@@ -60,12 +59,14 @@ public class Counter {
         }
     }
 
+    /** User count from cache */
     public int getUserCount() {
         synchronized (lock) {
             return users.size();
         }
     }
 
+    /** Visit count from cache */
     public int getVisitCount() {
         synchronized (lock) {
             return visitCount;
@@ -87,20 +88,28 @@ public class Counter {
     /** Special object used for stopping  */
     private static final Visit POISON_PILL = new Visit(Integer.MIN_VALUE, Integer.MIN_VALUE, null);
 
-    /** Wait for visit in queue and inserts them in DB in batches */
+    /** Wait for visit beans in queue and inserts them in DB in batches */
     private Runnable insertVisitors = () -> {
         List<Visit> visitBatch = new ArrayList<>(BATCH_SIZE);
 
         try {
             while (true) {
+                // try to take bean from queue for 500 ms
                 Visit visit = visits.poll(500, TimeUnit.MILLISECONDS);
 
+                // Bean successfully has been taken
                 if (visit != null) {
-                    if (POISON_PILL.equals(visit)) return;
+                    // if we eat poison pill then flush last batch and return
+                    if (POISON_PILL.equals(visit)) {
+                        if (visitBatch.size() > 0) dbHelper.insertBatch(visitBatch);
+                        return;
+                    }
 
                     visitBatch.add(visit);
                 }
 
+                // Bean hasn't been available and batch is not empty or batch size is maximum
+                // then flush batch
                 if ((visit == null && visitBatch.size() > 0) || visitBatch.size() >= BATCH_SIZE) {
                     long start = System.currentTimeMillis();
                     dbHelper.insertBatch(visitBatch);
@@ -121,7 +130,7 @@ public class Counter {
     /** Wait for visit in queue and insert */
     private ExecutorService dataUploader = Executors.newCachedThreadPool(daemonThreadFactory);
 
-    public static final int UPLOADERS_COUNT = 10;
+    public static final int UPLOADERS_COUNT = 4;
 
     /** Create DB objects if they doesn't exist and start dataUploader */
     @PostConstruct
@@ -131,6 +140,9 @@ public class Counter {
         for (int i = 0; i < UPLOADERS_COUNT; i++) {
             dataUploader.submit(insertVisitors);
         }
+
+        setVisitCounts(visitDb.getCurrentVisitCount(), visitDb.getCurrentUniqueUsers());
+        log.info(format("At init time user count = %d, visit count = %d ", getUserCount(), getVisitCount()));
     }
 
     /** Finish all dataUploader threads feeding them poison pill ;) */

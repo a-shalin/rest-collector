@@ -4,7 +4,6 @@ import org.apache.ibatis.jdbc.ScriptRunner;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.cloudinfosys.rc.beans.Period;
@@ -87,6 +86,8 @@ public class DbHelper {
         for (Visit visit : visits) {
             visitDb.insertVisit(visit);
         }
+        // flush is called automatically when transaction finishes, but if we call method inside this class
+        // or in outbound transaction this will not work
         visitDb.flush();
     }
 
