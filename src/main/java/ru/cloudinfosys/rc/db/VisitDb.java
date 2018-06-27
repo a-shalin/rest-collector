@@ -6,11 +6,14 @@ import org.apache.ibatis.annotations.Param;
 import ru.cloudinfosys.rc.beans.Period;
 import ru.cloudinfosys.rc.beans.Visit;
 
+/** Read and write visit's table */
 @Mapper
 public interface VisitDb {
     void insertVisit(@Param("visit") Visit visit);
     @Flush
     void flush();
+
+    void deleteVisits(@Param("period") Period period);
 
     int getCurrentUniqueUserCount();
     int getCurrentVisitCount();

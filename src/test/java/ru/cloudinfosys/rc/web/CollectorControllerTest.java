@@ -46,12 +46,12 @@ public class CollectorControllerTest {
     Counter counter;
 
     public static final int ROW_COUNT = 50000;
-    public static final int TASK_COUNT = 4;
+    public static final int TASK_COUNT = 10;
     private AtomicInteger processedRows = new AtomicInteger(0);
 
     @Test
     public void testBanchOfVisits() throws Exception {
-        ExecutorService es = Executors.newWorkStealingPool();
+        ExecutorService es = Executors.newFixedThreadPool(TASK_COUNT);
         processedRows.set(0);
 
         for (int i = 0; i < TASK_COUNT; i++) {

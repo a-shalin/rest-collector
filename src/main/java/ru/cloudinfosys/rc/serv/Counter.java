@@ -13,7 +13,6 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.lang.String.format;
 
@@ -74,7 +73,7 @@ public class Counter {
     }
 
     @Autowired
-    DdlRunner ddlRunner;
+    DbHelper dbHelper;
 
     private static final ThreadFactory daemonThreadFactory = r -> {
         Thread t = Executors.defaultThreadFactory().newThread(r);
@@ -103,9 +102,11 @@ public class Counter {
                 }
 
                 if ((visit == null && visitBatch.size() > 0) || visitBatch.size() >= BATCH_SIZE) {
-                    insertBatch(visitBatch);
+                    long start = System.currentTimeMillis();
+                    dbHelper.insertBatch(visitBatch);
                     visitBatch.clear();
-                    log.debug("Queue size = "+visits.size());
+                    log.debug(String.format("Queue size = %d, batch insert time = %d ms",
+                            visits.size(), System.currentTimeMillis() - start));
                 }
             }
         } catch (InterruptedException ie) {
@@ -117,14 +118,6 @@ public class Counter {
         }
     };
 
-    /** Prepare batch by inserting to ThreadLocal cache and push it in transaction */
-    @Transactional
-    void insertBatch (List<Visit> visitBatch) {
-        for (Visit visit : visitBatch) {
-            visitDb.insertVisit(visit);
-        }
-    }
-
     /** Wait for visit in queue and insert */
     private ExecutorService dataUploader = Executors.newCachedThreadPool(daemonThreadFactory);
 
@@ -133,7 +126,7 @@ public class Counter {
     /** Create DB objects if they doesn't exist and start dataUploader */
     @PostConstruct
     void init() {
-        ddlRunner.initDb();
+        dbHelper.initDb();
 
         for (int i = 0; i < UPLOADERS_COUNT; i++) {
             dataUploader.submit(insertVisitors);

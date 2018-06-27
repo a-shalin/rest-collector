@@ -6,6 +6,11 @@
         insert into rc_visit(user_id, page_id, doc_date) values (#{visit.userId}, #{visit.pageId}, #{visit.docDate})
     </insert>
 
+    <delete id="deleteVisits">
+        delete from rc_visit a
+        where   a.doc_date between #{period.begDate} and #{period.endDate}
+    </delete>
+
     <select id="getCurrentUniqueUserCount" resultType="_int">
         select	count(distinct user_id)
         from	rc_visit a
