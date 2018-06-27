@@ -14,8 +14,6 @@ public class CollectorController {
 
     @RequestMapping("/visit")
     public VisitResult visit(@RequestParam("userId") int userId, @RequestParam("pageId") int pageId) {
-        counter.visit(userId, pageId);
-
-        return new VisitResult(0, 0);
+        return counter.visit(userId, pageId);
     }
 }

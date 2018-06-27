@@ -3,7 +3,7 @@
 <configuration>
     <settings>
         <setting name="cacheEnabled" value="true" />
-        <!--<setting name="defaultExecutorType" value="SIMPLE" />  -->
+        <!--<setting name="defaultExecutorType" value="SIMPLE" />-->
         <setting name="defaultExecutorType" value="BATCH" />
         <setting name="mapUnderscoreToCamelCase" value="true" />
         <setting name="jdbcTypeForNull" value="NULL" />

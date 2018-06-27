@@ -1,5 +1,7 @@
 package ru.cloudinfosys.rc.web;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -13,7 +15,11 @@ import ru.cloudinfosys.rc.beans.Visit;
 import ru.cloudinfosys.rc.serv.Counter;
 
 import java.nio.charset.Charset;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -22,6 +28,7 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppC
 @RunWith(SpringRunner.class)
 @SpringBootTest
 public class CollectorControllerTest {
+    private final Logger log = LogManager.getLogger(getClass());
     private MediaType contentType = new MediaType(MediaType.APPLICATION_JSON.getType(),
             MediaType.APPLICATION_JSON.getSubtype(),
             Charset.forName("utf8"));
@@ -38,58 +45,45 @@ public class CollectorControllerTest {
     @Autowired
     Counter counter;
 
-    private volatile boolean stopped = false;
+    public static final int ROW_COUNT = 50000;
+    public static final int TASK_COUNT = 4;
+    private AtomicInteger processedRows = new AtomicInteger(0);
 
     @Test
-    public void visit() throws Exception {
-        for (int i = 0; i < 50000; i++) {
-            int userId = ThreadLocalRandom.current().nextInt(0, 100000);
-            int pageId = ThreadLocalRandom.current().nextInt(0, 1000000);
+    public void testBanchOfVisits() throws Exception {
+        ExecutorService es = Executors.newWorkStealingPool();
+        processedRows.set(0);
 
-            mockMvc.perform(get("/visit")
-                    .param(Visit.USER_ID, String.valueOf(userId))
-                    .param(Visit.PAGE_ID, String.valueOf(pageId))
-                    .accept(contentType)).andExpect(status().isOk());
+        for (int i = 0; i < TASK_COUNT; i++) {
+            es.submit(() -> {
+                try {
+                    for (int j = 0; j < ROW_COUNT / TASK_COUNT; j++) {
+                        int userId = ThreadLocalRandom.current().nextInt(0, 100000);
+                        int pageId = ThreadLocalRandom.current().nextInt(0, 1000000);
+
+                        mockMvc.perform(get("/visit")
+                                .param(Visit.USER_ID, String.valueOf(userId))
+                                .param(Visit.PAGE_ID, String.valueOf(pageId))
+                                .accept(contentType))
+                                .andExpect(status().isOk());
+
+                        processedRows.incrementAndGet();
+                    }
+                } catch (InterruptedException e) {
+                    log.debug("Visit generation thread interrupted");
+                } catch (Exception e) {
+                    log.error("Error interrupted visit generation thread", e);
+                }
+            });
         }
 
-//        ExecutorService es = Executors.newWorkStealingPool();
-//        stopped = false;
-//
-//        for (int i = 0; i < Runtime.getRuntime().availableProcessors(); i++) {
-//            es.submit(() -> {
-//                try {
-//                    while (true) {
-//                        if (stopped) {
-//                            LogManager.getLogger(CollectorControllerTest.class).debug("Visit generation thread finished");
-//                            return;
-//                        }
-//
-//                        int userId = ThreadLocalRandom.current().nextInt(0, 100000);
-//                        int pageId = ThreadLocalRandom.current().nextInt(0, 1000000);
-//
-//                        mockMvc.perform(get("/visit")
-//                                .param(Visit.USER_ID, String.valueOf(userId))
-//                                .param(Visit.PAGE_ID, String.valueOf(pageId))
-//                                .accept(contentType)).andExpect(status().isOk());
-//                    }
-//                } catch (InterruptedException e) {
-//                    LogManager.getLogger(CollectorControllerTest.class).debug("Visit generation thread interrupted");
-//                } catch (Exception e) {
-//                    LogManager.getLogger(CollectorControllerTest.class).error("Error interrupted visit generation thread", e);
-//                }
-//            });
-//        }
-//
-//        TimeUnit.SECONDS.sleep(30);
-//
-//        es.shutdown();
-//        stopped = true;
-//
-//        es.awaitTermination(20, TimeUnit.SECONDS);
-//        es.shutdownNow();
-//
-//        LogManager.getLogger(getClass()).debug("userCount = " + counter.getUserCount() +
-//                ", visitCount = " + counter.getVisitCount());
+        es.shutdown();
+        while (!es.awaitTermination(3, TimeUnit.SECONDS)) {
+            log.info(String.format("Queries processed %d from %d", processedRows.get(), ROW_COUNT));
+        }
+
+        log.info("userCount = " + counter.getUserCount() +
+                ", visitCount = " + counter.getVisitCount());
     }
 
 }
