@@ -4,6 +4,7 @@ import org.apache.ibatis.jdbc.ScriptRunner;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.cloudinfosys.rc.beans.Period;
@@ -19,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /** Wrapper around MyBatis ScriptRunner to make easier script running */
 @Service
@@ -135,5 +137,20 @@ public class DbHelper {
             return;
 
         visitDb.deleteVisits(new Period(SAMPLE_BEG_DATE, SAMPLE_END_DATE));
+    }
+
+    @Async
+    public CompletableFuture<Integer> getPeriodVisitCount(Period period) {
+        return CompletableFuture.completedFuture(visitDb.getPeriodVisitCount(period));
+    }
+
+    @Async
+    public CompletableFuture<Integer> getPeriodUniqueUserCount(Period period) {
+        return CompletableFuture.completedFuture(visitDb.getPeriodUniqueUserCount(period));
+    }
+
+    @Async
+    public CompletableFuture<Integer> getPeriodLoyalUserCount(Period period) {
+        return CompletableFuture.completedFuture(visitDb.getPeriodLoyalUserCount(period));
     }
 }

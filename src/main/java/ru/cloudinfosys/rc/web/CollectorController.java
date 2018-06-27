@@ -7,12 +7,14 @@ import org.springframework.web.bind.annotation.RestController;
 import ru.cloudinfosys.rc.beans.Period;
 import ru.cloudinfosys.rc.beans.Stat;
 import ru.cloudinfosys.rc.beans.VisitResult;
-import ru.cloudinfosys.rc.db.VisitDb;
 import ru.cloudinfosys.rc.serv.Counter;
+import ru.cloudinfosys.rc.serv.DbHelper;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 @RestController
 public class CollectorController {
@@ -25,7 +27,7 @@ public class CollectorController {
     }
 
     @Autowired
-    VisitDb visitDb;
+    DbHelper dbHelper;
 
     @RequestMapping(value = "/stat")
     public Stat stat(@RequestParam("begDate") String begDate, @RequestParam("endDate") String endDate) {
@@ -40,13 +42,13 @@ public class CollectorController {
 
             Period period = new Period(df.parse(begDate), endCalendar.getTime());
 
-            int visitCount = visitDb.getPeriodVisitCount(period);
-            int uniqueCount = visitDb.getPeriodUniqueUserCount(period);
+            CompletableFuture<Integer> visitCount = dbHelper.getPeriodVisitCount(period);
+            CompletableFuture<Integer> uniqueUserCount = dbHelper.getPeriodUniqueUserCount(period);
+            CompletableFuture<Integer> loyalUserCount = dbHelper.getPeriodLoyalUserCount(period);
+            CompletableFuture.allOf(visitCount, uniqueUserCount, loyalUserCount).join();
 
-            return new Stat(visitDb.getPeriodVisitCount(period),
-                    visitDb.getPeriodUniqueUserCount(period),
-                    visitDb.getPeriodLoyalUserCount(period));
-        } catch (ParseException e) {
+            return new Stat(visitCount.get(), uniqueUserCount.get(), loyalUserCount.get());
+        } catch (ParseException | InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         }
     }
