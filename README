@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------
 Prerequisites : PostgreSQL, maven
 ------------------------------------------------------------------------
-PostgreSQL DB is needed for project to be built because tests use DB heavily
+PostgreSQL DB is needed for project to be built because tests heavily use DB
 to check DB operations and calculate service performance.
 It's assumed that DB with name "ashalin", user "ashalin", pass "ashalin"
 has been created on localhost.

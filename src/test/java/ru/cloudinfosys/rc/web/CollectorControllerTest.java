@@ -97,15 +97,9 @@ public class CollectorControllerTest {
         log.info(format("Processed %d REST calls in %d ms, rate = %2f calls per sec. User count = %d, visit count = %d",
                 ROW_COUNT, diff, ROW_COUNT*1000.0/diff, counter.getUserCount(), counter.getVisitCount()));
 
-        // We are waiting for data uploader to finish
-        while(!counter.isVisitsQueueEmpty()) {
-            TimeUnit.MILLISECONDS.sleep(100);
-            Thread.sleep(100);
-        }
-        // Waiting for last batches to be inserted
-        TimeUnit.SECONDS.sleep(2);
         // Remove all inserted data
-        visitDb.deleteVisitsByUserId(0-10000000, 10000-10000000);
+        counter.addDataUploaderShutdownListener(() ->
+                visitDb.deleteVisitsByUserId(0-10000000, 10000-10000000));
     }
 
     @Autowired

@@ -77,11 +77,6 @@ public class Counter {
         }
     }
 
-    /** Check if visits queue is empty */
-    public boolean isVisitsQueueEmpty() {
-        return visits.isEmpty();
-    }
-
     @Autowired
     DbHelper dbHelper;
 
@@ -172,9 +167,21 @@ public class Counter {
 
             log.info(format("dataUploader finished in %d ms",
                     System.currentTimeMillis()-startDataUploader));
+
+            if (!afterShutdownTasks.isEmpty()) {
+                for (Runnable task : afterShutdownTasks) task.run();
+            }
+
         } catch (InterruptedException e) {
             log.error("dataUploader was terminated ungracefully");
         }
+    }
+
+    Set<Runnable> afterShutdownTasks = ConcurrentHashMap.newKeySet();
+
+    /** Add listener to exec code after data uploader has been stopped */
+    public void addDataUploaderShutdownListener(Runnable task) {
+        afterShutdownTasks.add(task);
     }
 
     @Scheduled(cron="0 0 0 * * *")
