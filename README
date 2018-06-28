@@ -82,8 +82,8 @@ src/main/resources/ru/cloudinfosys/rc/db/*      --  MyBatis xml files with queri
 Description
 -------------------------------------------------------------------------
 
-Main login concentrated in Counter service class.
-When application starts it loads visit count and user id's set for current day.
+Main logic concentrated in Counter service class.
+When application starts it loads visit count and user ids set for current day.
 Also the task is scheduled to lock and update this cache from DB at 00:00 every day.
 When method visit is called it puts visit information in queue and update counters.
 So it's very short call.
