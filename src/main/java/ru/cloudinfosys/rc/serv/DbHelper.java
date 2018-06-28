@@ -69,7 +69,7 @@ public class DbHelper {
 
     static {
         Calendar calendar = Calendar.getInstance();
-        calendar.set(1913, 2, 1, 0,0,0);
+        calendar.set(1913, Calendar.FEBRUARY, 1, 0,0,0);
         SAMPLE_BEG_DATE = calendar.getTime();
 
         calendar.add(Calendar.DAY_OF_MONTH, SAMPLE_DAY_COUNT);
@@ -106,7 +106,7 @@ public class DbHelper {
         List<Visit> batch = new ArrayList<>(100);
 
         for (int dayOffset = 0; dayOffset < SAMPLE_DAY_COUNT; dayOffset++) {
-            for (int pageId = FIRST_PAGE_ID; pageId < FIRST_PAGE_ID + PAGE_COUNT; pageId++) {
+            for (int pageId = FIRST_PAGE_ID; pageId < FIRST_PAGE_ID + dayOffset; pageId++) {
                 for (int userId = FIRST_USER_ID; userId < FIRST_USER_ID + USER_COUNT; userId++) {
                     Calendar docDate = Calendar.getInstance();
                     docDate.set(Calendar.YEAR, begDate.get(Calendar.YEAR));

@@ -3,6 +3,7 @@ package ru.cloudinfosys.rc.serv;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import ru.cloudinfosys.rc.beans.Visit;
 import ru.cloudinfosys.rc.beans.VisitResult;
@@ -37,7 +38,7 @@ public class Counter {
             int count, userCount;
 
             synchronized (lock) {
-                count = visitCount++;
+                count = ++visitCount;
 
                 users.add(userId);
                 userCount = users.size();
@@ -50,13 +51,16 @@ public class Counter {
     }
 
     /** Prepare count cache */
-    private void setVisitCounts(int visitCount, Collection<Integer> users) {
+    private void setVisitCounts() {
         synchronized (lock) {
-            this.visitCount = visitCount;
+            this.visitCount = visitDb.getCurrentVisitCount();
 
             this.users.clear();
-            this.users.addAll(users);
+            this.users.addAll(visitDb.getCurrentUniqueUsers());
         }
+
+        log.info(format("Cache counts were updated, visit count = %d, unique users count = %d",
+                getVisitCount(), getUserCount()));
     }
 
     /** User count from cache */
@@ -71,6 +75,11 @@ public class Counter {
         synchronized (lock) {
             return visitCount;
         }
+    }
+
+    /** Check if visits queue is empty */
+    public boolean isVisitsQueueEmpty() {
+        return visits.isEmpty();
     }
 
     @Autowired
@@ -113,9 +122,10 @@ public class Counter {
                 if ((visit == null && visitBatch.size() > 0) || visitBatch.size() >= BATCH_SIZE) {
                     long start = System.currentTimeMillis();
                     dbHelper.insertBatch(visitBatch);
+                    log.debug(String.format("Queue size = %d, batch insert time = %d ms, batch size = %d",
+                            visits.size(), System.currentTimeMillis() - start, visitBatch.size()));
+
                     visitBatch.clear();
-                    log.debug(String.format("Queue size = %d, batch insert time = %d ms",
-                            visits.size(), System.currentTimeMillis() - start));
                 }
             }
         } catch (InterruptedException ie) {
@@ -130,19 +140,19 @@ public class Counter {
     /** Wait for visit in queue and insert */
     private ExecutorService dataUploader = Executors.newCachedThreadPool(daemonThreadFactory);
 
-    public static final int UPLOADERS_COUNT = 4;
+    public static final int UPLOADERS_COUNT = Runtime.getRuntime().availableProcessors();
 
     /** Create DB objects if they doesn't exist and start dataUploader */
     @PostConstruct
     void init() {
         dbHelper.initDb();
+        dbHelper.prepareSampleData();
 
         for (int i = 0; i < UPLOADERS_COUNT; i++) {
             dataUploader.submit(insertVisitors);
         }
 
-        setVisitCounts(visitDb.getCurrentVisitCount(), visitDb.getCurrentUniqueUsers());
-        log.info(format("At init time user count = %d, visit count = %d ", getUserCount(), getVisitCount()));
+        setVisitCounts();
     }
 
     /** Finish all dataUploader threads feeding them poison pill ;) */
@@ -165,5 +175,10 @@ public class Counter {
         } catch (InterruptedException e) {
             log.error("dataUploader was terminated ungracefully");
         }
+    }
+
+    @Scheduled(cron="0 0 0 * * *")
+    void updateCounters() {
+        setVisitCounts();
     }
 }

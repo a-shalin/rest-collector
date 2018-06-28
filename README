@@ -1,0 +1,92 @@
+------------------------------------------------------------------------
+Prerequisites
+------------------------------------------------------------------------
+PostgreSQL DB is needed for project to be built because tests use DB heavily
+to check DB operations and calculate service performance.
+It's assumed that DB with name "ashalin", user "ashalin", pass "ashalin"
+has been created on localhost.
+You can change this settings before starting a build in application.properties
+
+Script for DB creation:
+
+sudo -u postgres psql <<EOF
+create role ashalin login password 'ashalin' valid until 'infinity';
+create database ashalin with encoding='UTF8' template=template0  owner=ashalin lc_collate='en_US.UTF-8' lc_ctype='en_US.UTF-8';
+EOF
+
+-------------------------------------------------------------------------
+Build & Run
+-------------------------------------------------------------------------
+mvn clean package
+java -jar target/rc-0.0.1.jar
+
+Service will be started at localhost:8080
+
+-------------------------------------------------------------------------
+Testing
+-------------------------------------------------------------------------
+There is a thorough set of tests of DB queries and REST calls in project
+you may view them in src/test/**.
+
+Test data inserted during service startup using code like bellow:
+
+for (int dayOffset = 0; dayOffset < 20; dayOffset++)
+    for (int pageId = 500; pageId < 500 + dayOffset; pageId++)
+        for (int userId = 1; userId < 300; userId++)
+            insert_visit(user_id, page_id, '1913-02-01' + dayOffset)
+
+
+Open in browser http://localhost:8080/visit?userId=1&pageId=1
+then press F5 several times to see increased counters
+
+View stats with:
+    http://localhost:8080/stat?begDate=1913-02-01&endDate=1913-02-01
+    http://localhost:8080/stat?begDate=1913-02-10&endDate=1913-02-10
+    http://localhost:8080/stat?begDate=1913-02-11&endDate=1913-02-11
+    etc.
+
+For load testing you may create Load test in SoapUI https://www.soapui.org
+with REST URL http://localhost:8080/visit?userId=11&pageId=11
+and run in Thread mode.
+
+I was able to achieve only 1200 tps so I decided
+to comment out visit body and compare. Actually result was the same.
+At the moment saving subsystem works 20x faster then
+SoapUI 10 threads + Spring empty REST call. So to optimize performance
+further we need to tune Spring REST response time.
+
+-------------------------------------------------------------------------
+Project structure
+-------------------------------------------------------------------------
+src/main/java/ru/cloudinfosys/rc/RcApplication  --  main application class
+src/main/java/ru/cloudinfosys/rc/beans/*        --  beans
+src/main/java/ru/cloudinfosys/rc/db/*           --  MyBatis interfaces for query mapping
+src/main/java/ru/cloudinfosys/rc/serv/Counter   --  main processing service, caches counters and uploads
+                                                    visits asynchronously
+src/main/java/ru/cloudinfosys/rc/serv/DbHelper  --  util class, makes ddl and other db operations easier
+src/main/java/ru/cloudinfosys/rc/web/*          --  REST controller
+
+src/test/**                                     --  corresponding tests for classes above
+
+src/main/resources/*                            --  config files
+src/main/resources/sql/*                        --  sql scripts for db struct creature and cleaning
+src/main/resources/ru/cloudinfosys/rc/db/*      --  MyBatis xml files with queries
+
+-------------------------------------------------------------------------
+Description
+-------------------------------------------------------------------------
+
+Main login concentrated in Counter service class.
+When application starts it loads visit count and user id's set for current day.
+Also the task is scheduled to lock and update this cache from DB at 00:00 every day.
+When method visit is called it puts visit information in queue and update counters.
+So it's very short call.
+
+The uploader executor starts when service Counter is created. Its tasks listen to
+queue and prepare batches for insertion. If batch size equals BATCH_SIZE or no
+visits come to queue in 500 ms then task inserts batch into DB.
+When Spring finishes execution PreDestroy hook is called to finish executor and
+safely flush all beans is queue.
+
+Performance test with mock servlet gave 9000-11000 calls per second on 4 core Xeon,
+and more than 20000 calls per second on i7 4 core (8 threads).

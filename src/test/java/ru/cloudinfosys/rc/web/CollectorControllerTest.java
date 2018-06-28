@@ -19,6 +19,7 @@ import ru.cloudinfosys.rc.serv.Counter;
 import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
@@ -53,12 +54,13 @@ public class CollectorControllerTest {
     Counter counter;
 
     public static final int ROW_COUNT = 100000;
-    public static final int TASK_COUNT = 4;
+    public static final int TASK_COUNT = Runtime.getRuntime().availableProcessors();
     private AtomicInteger processedRows = new AtomicInteger(0);
 
     @Test
     public void testBanchOfVisits() throws Exception {
         long start = System.currentTimeMillis();
+        log.info(format("Start processing %d rows", ROW_COUNT));
 
         ExecutorService es = Executors.newFixedThreadPool(TASK_COUNT);
         processedRows.set(0);
@@ -67,8 +69,8 @@ public class CollectorControllerTest {
             es.submit(() -> {
                 try {
                     for (int j = 0; j < ROW_COUNT / TASK_COUNT; j++) {
-                        int userId = ThreadLocalRandom.current().nextInt(0, 10000);
-                        int pageId = ThreadLocalRandom.current().nextInt(0, 1000000);
+                        int userId = ThreadLocalRandom.current().nextInt(0, 10000)-10000000;
+                        int pageId = ThreadLocalRandom.current().nextInt(0, 1000);
 
                         mockMvc.perform(get("/visit")
                                 .param(Visit.USER_ID, String.valueOf(userId))
@@ -94,6 +96,16 @@ public class CollectorControllerTest {
         long diff = System.currentTimeMillis() - start;
         log.info(format("Processed %d REST calls in %d ms, rate = %2f calls per sec. User count = %d, visit count = %d",
                 ROW_COUNT, diff, ROW_COUNT*1000.0/diff, counter.getUserCount(), counter.getVisitCount()));
+
+        // We are waiting for data uploader to finish
+        while(!counter.isVisitsQueueEmpty()) {
+            TimeUnit.MILLISECONDS.sleep(100);
+            Thread.sleep(100);
+        }
+        // Waiting for last batches to be inserted
+        TimeUnit.SECONDS.sleep(2);
+        // Remove all inserted data
+        visitDb.deleteVisitsByUserId(0-10000000, 10000-10000000);
     }
 
     @Autowired

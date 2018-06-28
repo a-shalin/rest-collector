@@ -36,7 +36,7 @@ public class DbHelperTest {
     public void testSampleData() {
         dbHelper.prepareSampleData();
 
-        assertEquals(DbHelper.SAMPLE_DAY_COUNT * DbHelper.USER_COUNT * DbHelper.PAGE_COUNT,
+        assertEquals(57000,
                 visitDb.getPeriodVisitCount(new Period(DbHelper.SAMPLE_BEG_DATE, DbHelper.SAMPLE_END_DATE)));
     }
 }

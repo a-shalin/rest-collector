@@ -11,6 +11,11 @@
         where   a.doc_date between #{period.begDate} and #{period.endDate}
     </delete>
 
+    <delete id="deleteVisitsByUserId">
+        delete from rc_visit a
+        where   a.user_id between #{userIdLeft} and #{userIdRight}
+    </delete>
+
     <select id="getCurrentUniqueUsers" resultType="_int">
         select	distinct user_id
         from	rc_visit a

@@ -16,6 +16,7 @@ public interface VisitDb {
     void flush();
 
     void deleteVisits(@Param("period") Period period);
+    void deleteVisitsByUserId(@Param("userIdLeft") int userIdLeft, @Param("userIdRight") int userIdRight);
 
     List<Integer> getCurrentUniqueUsers();
     int getCurrentUniqueUserCount();
