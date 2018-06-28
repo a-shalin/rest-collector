@@ -1,5 +1,5 @@
 ------------------------------------------------------------------------
-Prerequisites
+Prerequisites : PostgreSQL, maven
 ------------------------------------------------------------------------
 PostgreSQL DB is needed for project to be built because tests use DB heavily
 to check DB operations and calculate service performance.

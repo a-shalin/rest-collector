@@ -23,8 +23,8 @@ public class CollectorController {
 
     @RequestMapping("/visit")
     public VisitResult visit(@RequestParam("userId") int userId, @RequestParam("pageId") int pageId) {
-//        return counter.visit(userId, pageId);
-        return new VisitResult(55, 55);
+        return counter.visit(userId, pageId);
+//        return new VisitResult(55, 55);
     }
 
     @Autowired
