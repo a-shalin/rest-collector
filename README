@@ -45,15 +45,21 @@ View stats with:
     http://localhost:8080/stat?begDate=1913-02-11&endDate=1913-02-11
     etc.
 
-For load testing you may create Load test in SoapUI https://www.soapui.org
+For load testing use JMeter load-visit-test.jmx file. You can change host
+and port settings in this file if it's necessary.
+
+Running example:
+
+$ ~/Downloads/apache-jmeter-4.0/bin/jmeter.sh -n -t load-visits-test.jmx -l ~/load.jtl
+
+JMeter has shown me 9000-1000 tps on 4 core Xeon. It's close to JUnit performance
+test results on the same hardware.
+
+Or you may create Load test in SoapUI https://www.soapui.org
 with REST URL http://localhost:8080/visit?userId=11&pageId=11
 and run in Thread mode.
 
-I was able to achieve only 1200 tps so I decided
-to comment out visit body and compare. Actually result was the same.
-At the moment saving subsystem works 20x faster then
-SoapUI 10 threads + Spring empty REST call. So to optimize performance
-further we need to tune Spring REST response time.
+SoapUI runs much slower, I was able to achieve 1000 tps only
 
 -------------------------------------------------------------------------
 Project structure
