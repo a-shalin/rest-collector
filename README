@@ -1,13 +1,13 @@
 ------------------------------------------------------------------------
 Prerequisites : PostgreSQL, maven
 ------------------------------------------------------------------------
-PostgreSQL DB is needed for project to be built because tests heavily use DB
-to check DB operations and calculate service performance.
-It's assumed that DB with name "ashalin", user "ashalin", pass "ashalin"
-has been created on localhost.
-You can change this settings before starting a build in application.properties
+PostgreSQL DB is needed for the project to be built because tests use DB heavily
+to check DB operations and calculate the service performance.
+It's assumed that DB with the name "ashalin", user "ashalin", pass "ashalin"
+has been created on the localhost.
+You can change these settings before starting to build in application.properties
 
-Script for DB creation:
+The script for the DB creation:
 
 sudo -u postgres psql <<EOF
 create role ashalin login password 'ashalin' valid until 'infinity';
@@ -28,7 +28,7 @@ Testing
 There is a thorough set of tests of DB queries and REST calls in project
 you may view them in src/test/**.
 
-Test data inserted during service startup using code like bellow:
+Test data inserted during the service startup using the code like below:
 
 for (int dayOffset = 0; dayOffset < 20; dayOffset++)
     for (int pageId = 500; pageId < 500 + dayOffset; pageId++)
@@ -52,12 +52,12 @@ Running example:
 
 $ ~/Downloads/apache-jmeter-4.0/bin/jmeter.sh -n -t load-visits-test.jmx -l ~/load.jtl
 
-JMeter has shown me 9000-1000 tps on 4 core Xeon. It's close to JUnit performance
+JMeter has shown 9000-1000 tps on 4 core Xeon. It's close to JUnit performance
 test results on the same hardware.
 
-Or you may create Load test in SoapUI https://www.soapui.org
+Or you may create a Load test in SoapUI https://www.soapui.org
 with REST URL http://localhost:8080/visit?userId=11&pageId=11
-and run in Thread mode.
+and run in the Thread mode.
 
 SoapUI runs much slower, I was able to achieve 1000 tps only
 
@@ -83,16 +83,16 @@ Description
 -------------------------------------------------------------------------
 
 Main logic has been concentrated in Counter service class.
-When application starts it loads visit count and user ids set for current day.
+When the application starts it loads visit count and user ids set for the current day.
 Also the task is scheduled to lock and update this cache from DB at 00:00 every day.
-When method visit is called it puts visit information in queue and update counters.
-So it's very short call.
+When method with the name "visit" is called it puts visit information in queue and update counters.
+So it's a very short call.
 
-The uploader executor starts when service Counter is created. Its tasks listen to
-queue and prepare batches for insertion. If batch size equals BATCH_SIZE or no
-visits come to queue in 500 ms then task inserts batch into DB.
-When Spring finishes execution PreDestroy hook is called to finish executor and
+The uploader executor starts when the service Counter is created. Its tasks wait
+for beans in the queue and prepare batches for insertion. If the batch size equals
+BATCH_SIZE or no visits come to queue in 500 ms then task inserts batch into DB.
+When Spring finishes the execution PreDestroy hook is called to finish the executor and
 safely flush all beans is queue.
 
-Performance test with mock servlet gave 9000-11000 calls per second on 4 core Xeon,
+A performance test with mock servlet gave 9000-11000 calls per second on 4 core Xeon,
 and more than 20000 calls per second on i7 4 core (8 threads).
