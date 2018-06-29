@@ -82,7 +82,7 @@ src/main/resources/ru/cloudinfosys/rc/db/*      --  MyBatis xml files with queri
 Description
 -------------------------------------------------------------------------
 
-Main logic has been concentrated in Counter service class.
+Main logic has been implemented in Counter service class.
 When the application starts it loads visit count and user ids set for the current day.
 Also the task is scheduled to lock and update this cache from DB at 00:00 every day.
 When method with the name "visit" is called it puts visit information in queue and update counters.
